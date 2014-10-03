@@ -108,22 +108,51 @@ namespace Gamesofa.Excel2ScriptObject
 							}
 							else
 							{
-								try
-								{
-									object converted = Convert.ChangeType(value, d.fieldInfo.FieldType);
-									d.fieldInfo.SetValue(element, converted);
+								object converted;
+								Type type = d.fieldInfo.FieldType;
 
-									if (SHOW_CONVERT_DETAIL)
-										Debug.Log(string.Format("{0}, cellType: {1}, value: \"{2}\"({3}), field name: {4}({5}), convert: {6}",
-											ExcelUtilities.GetCellName(i, colIndex), row.GetCell(colIndex).CellType, value, value.GetType(), d.fieldInfo.Name, d.fieldInfo.FieldType, converted));
-								}
-								catch (Exception e)
+								if (type.IsEnum)
 								{
-									Debug.LogError(string.Format("Error at {0}, cellType: {1}, trying to convert \"{2}\"({3}) to {4} on {5}.{6}, error: {7}",
-											ExcelUtilities.GetCellName(i, colIndex), row.GetCell(colIndex).CellType, value, value.GetType(), d.fieldInfo.FieldType, elementType, d.fieldInfo.Name, e));
-									throw e;
+									try
+									{
+										converted = Enum.Parse(type, value.ToString(), true);
+									}
+									catch (Exception e)
+									{
+										Debug.LogError(string.Format("{0}: {1} is not a member of the {2} enumeration.", ExcelUtilities.GetCellName(row.RowNum, colIndex), value, type));
+										throw e;
+									}
+
+									// http://msdn.microsoft.com/zh-tw/library/essfb559%28v=vs.110%29.aspx
+									if (!Enum.IsDefined(type, converted) && !converted.ToString().Contains(",")) 
+										Debug.LogWarning(string.Format("{0}: {1} is not an underlying value of the {2} enumeration.", ExcelUtilities.GetCellName(row.RowNum, colIndex), value, type));
 								}
+								else
+								{
+									try
+									{
+										converted = Convert.ChangeType(value, type);
+									}
+									catch (Exception e)
+									{
+										Debug.LogError(string.Format("Error at {0}, cellType: {1}, trying to convert \"{2}\"({3}) to {4} on {5}.{6}, error: {7}",
+												ExcelUtilities.GetCellName(i, colIndex), row.GetCell(colIndex).CellType, value, value.GetType(), d.fieldInfo.FieldType, elementType, d.fieldInfo.Name, e));
+										throw e;
+									}
+								}
+
+								d.fieldInfo.SetValue(element, converted);
+
+								if (SHOW_CONVERT_DETAIL)
+									Debug.Log(string.Format("{0}, cellType: {1}, value: \"{2}\"({3}), field name: {4}({5}), convert: {6}",
+										ExcelUtilities.GetCellName(i, colIndex), row.GetCell(colIndex).CellType, value, value.GetType(), d.fieldInfo.Name, d.fieldInfo.FieldType, converted));
 							}
+							//catch (Exception e)
+							//{
+							//    Debug.LogError(string.Format("Error at {0}, cellType: {1}, trying to convert \"{2}\"({3}) to {4} on {5}.{6}, error: {7}",
+							//            ExcelUtilities.GetCellName(i, colIndex), row.GetCell(colIndex).CellType, value, value.GetType(), d.fieldInfo.FieldType, elementType, d.fieldInfo.Name, e));
+							//    throw e;
+							//}
 						}
 					}
 
